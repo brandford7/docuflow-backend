@@ -1,6 +1,6 @@
-package com.docuflow.repository;
+package com.docuflow.api.repository;
 
-import com.docuflow.entity.Subscription;
+import com.docuflow.api.entity.Subscription;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

@@ -1,4 +1,4 @@
-package com.docuflow.config;
+package com.docuflow.api.config;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;

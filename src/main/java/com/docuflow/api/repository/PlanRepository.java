@@ -1,6 +1,6 @@
-package com.docuflow.repository;
+package com.docuflow.api.repository;
 
-import com.docuflow.entity.Plan;
+import com.docuflow.api.entity.Plan;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

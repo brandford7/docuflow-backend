@@ -1,76 +1,112 @@
 package com.docuflow.api.security;
 
 import com.docuflow.api.config.AppProperties;
-import com.docuflow.api.entity.User;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
-import java.security.Key;
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Function;
+import java.util.UUID;
 
+/**
+ * Handles JWT generation and validation.
+ *
+ * Two token types:
+ *
+ * Access token  — short-lived (24h). Sent on every API request in the
+ *                 Authorization: Bearer header. Contains the user's ID
+ *                 and email as claims.
+ *
+ * Refresh token — long-lived (7d). Sent only to POST /api/auth/refresh
+ *                 to get a new access token. Has a "type":"refresh" claim
+ *                 so we can tell the two apart and reject a refresh token
+ *                 used as an access token (and vice versa).
+ */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class JwtService {
 
     private final AppProperties appProperties;
 
-    // --- Token Generation Methods ---
+    // ── Token generation ──────────────────────────────────────────────────────
 
-    public String generateToken(User user) {
-        return buildToken(new HashMap<>(), user, appProperties.getJwt().getAccessTokenExpiryMs());
-    }
-
-    public String generateRefreshToken(User user) {
-        return buildToken(new HashMap<>(), user, appProperties.getJwt().getRefreshTokenExpiryMs());
-    }
-
-    private String buildToken(Map<String, Object> extraClaims, User user, long expiration) {
+    public String generateAccessToken(UserDetails user, UUID userId) {
         return Jwts.builder()
-                .setClaims(extraClaims)
-                .setSubject(user.getEmail()) // We use email as the unique identifier
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + expiration))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
-                .compact();
+            .setSubject(user.getUsername())
+            .claim("userId", userId.toString())
+            .claim("type", "access")
+            .setIssuedAt(new Date())
+            .setExpiration(new Date(System.currentTimeMillis()
+                + appProperties.getJwt().getAccessTokenExpiryMs()))
+            .signWith(signingKey())
+            .compact();
     }
 
-    // --- Validation & Extraction Methods ---
+    public String generateRefreshToken(UserDetails user) {
+        return Jwts.builder()
+            .setSubject(user.getUsername())
+            .claim("type", "refresh")
+            .setIssuedAt(new Date())
+            .setExpiration(new Date(System.currentTimeMillis()
+                + appProperties.getJwt().getRefreshTokenExpiryMs()))
+            .signWith(signingKey())
+            .compact();
+    }
+
+    // ── Token validation ──────────────────────────────────────────────────────
+
+    public boolean isTokenValid(String token, UserDetails userDetails) {
+        try {
+            String email = extractEmail(token);
+            return email.equals(userDetails.getUsername()) && !isExpired(token);
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    public boolean isRefreshToken(String token) {
+        try {
+            return "refresh".equals(extractClaims(token).get("type", String.class));
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // ── Claim extraction ──────────────────────────────────────────────────────
 
     public String extractEmail(String token) {
-        return extractClaim(token, Claims::getSubject);
+        return extractClaims(token).getSubject();
     }
 
-    public boolean isTokenValid(String token, String userEmail) {
-        final String email = extractEmail(token);
-        return (email.equals(userEmail)) && !isTokenExpired(token);
+    public UUID extractUserId(String token) {
+        String id = extractClaims(token).get("userId", String.class);
+        return id != null ? UUID.fromString(id) : null;
     }
 
-    private boolean isTokenExpired(String token) {
-        return extractClaim(token, Claims::getExpiration).before(new Date());
+    // ── Private helpers ───────────────────────────────────────────────────────
+
+    private boolean isExpired(String token) {
+        return extractClaims(token).getExpiration().before(new Date());
     }
 
-    private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        final Claims claims = extractAllClaims(token);
-        return claimsResolver.apply(claims);
+    private Claims extractClaims(String token) {
+        return Jwts.parser()
+            .verifyWith(signingKey())
+            .build()
+            .parseSignedClaims(token)
+            .getPayload();
     }
 
-    private Claims extractAllClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-    }
-
-    private Key getSigningKey() {
-        byte[] keyBytes = appProperties.getJwt().getSecret().getBytes();
-        return Keys.hmacShaKeyFor(keyBytes);
+    private SecretKey signingKey() {
+        return Keys.hmacShaKeyFor(
+            appProperties.getJwt().getSecret().getBytes(StandardCharsets.UTF_8));
     }
 }

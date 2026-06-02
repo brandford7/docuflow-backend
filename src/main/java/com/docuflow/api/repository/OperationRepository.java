@@ -1,6 +1,6 @@
-package com.docuflow.repository;
+package com.docuflow.api.repository;
 
-import com.docuflow.entity.Operation;
+import com.docuflow.api.entity.Operation;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

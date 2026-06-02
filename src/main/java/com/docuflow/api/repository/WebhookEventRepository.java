@@ -1,6 +1,6 @@
-package com.docuflow.repository;
+package com.docuflow.api.repository;
 
-import com.docuflow.entity.WebhookEvent;
+import com.docuflow.api.entity.WebhookEvent;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
