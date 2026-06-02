@@ -1,15 +1,23 @@
-package com.docuflow.api.repository;
+package com.docuflow.repository;
+
+import com.docuflow.entity.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 import java.util.UUID;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-
-import com.docuflow.api.entity.User;
-
+@Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
-    Optional<User> findByEmail(String email);
+
+    @Query("SELECT u FROM User u WHERE u.email = :email AND u.deletedAt IS NULL")
+    Optional<User> findActiveByEmail(@Param("email") String email);
 
     boolean existsByEmail(String email);
-    
+
+    Optional<User> findByVerificationToken(String token);
+
+    Optional<User> findByResetToken(String token);
 }

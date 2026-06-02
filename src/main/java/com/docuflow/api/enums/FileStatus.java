@@ -4,6 +4,5 @@ public enum FileStatus {
     UPLOADING,
     READY,
     PROCESSING,
-    EXPIRED,
     DELETED
 }

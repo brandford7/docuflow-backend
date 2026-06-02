@@ -1,42 +1,99 @@
 package com.docuflow.api.config;
 
+import com.docuflow.api.security.JwtAuthFilter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import lombok.RequiredArgsConstructor;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final JwtAuthFilter jwtAuthFilter;
+    private final UserDetailsService userDetailsService;
+    private final AppProperties appProperties;
+
+    private static final String[] PUBLIC_ENDPOINTS = {
+        "/api/auth/**",
+        "/api/webhooks/**",
+        "/api-docs/**",
+        "/swagger-ui/**",
+        "/swagger-ui.html",
+        "/actuator/health"
+    };
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-
-        //disable csrf for stateless API because we are using stateless JWT for authentication not cookies/sessions
-        http.csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth
-
-                        //allow unauthenticated access to the auth endpoints (e.g. /api/v1/auth/**) for login and registration
-                        .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers("/error").permitAll()
-                        //any other request must be authenticated (i.e. must have a valid JWT token in the Authorization header)    
-                        .anyRequest().authenticated())
-                // 3. Make the session policy stateless (Spring won't create an HttpSession)
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-
-        return http.build();
+        return http
+            .csrf(AbstractHttpConfigurer::disable)
+            .cors(cors -> cors.configurationSource(corsSource()))
+            .sessionManagement(s ->
+                s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                .anyRequest().authenticated()
+            )
+            .authenticationProvider(authProvider())
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+            .build();
     }
+
+   @Bean
+    public AuthenticationProvider authProvider() {
+    // 1. Pass the required UserDetailsService directly into the constructor
+    DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
     
+    // 2. Set the password encoder via the setter method
+    provider.setPasswordEncoder(passwordEncoder());
+    
+    return provider;
+   }
+
+
+    @Bean
+    public AuthenticationManager authManager(AuthenticationConfiguration config)
+            throws Exception {
+        return config.getAuthenticationManager();
+    }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder(12);
+    }
+
+    @Bean
+    public CorsConfigurationSource corsSource() {
+        var config = new CorsConfiguration();
+        config.setAllowedOrigins(
+            List.of(appProperties.getCors().getAllowedOrigins().split(",")));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
+
+        var source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 }

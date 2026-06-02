@@ -105,7 +105,12 @@
     <artifactId>spring-boot-configuration-processor</artifactId>
     <optional>true</optional>
 </dependency>
-		
+		 <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+      <version>3.0.2</version>
+    </dependency>
+
 	</dependencies>
 
 	<build>

@@ -1,0 +1,77 @@
+# ============================================================
+# application-prod.yml — production environment
+#
+# All sensitive values come from environment variables.
+# Nothing sensitive is hardcoded in this file.
+#
+# Required environment variables:
+#   DATABASE_URL          jdbc:postgresql://host:5432/dbname
+#   DATABASE_USER         db username
+#   DATABASE_PASSWORD     db password
+#   REDIS_HOST            redis host
+#   REDIS_PASSWORD        redis password (if set)
+#   JWT_SECRET            min 32 chars, cryptographically random
+#   R2_ENDPOINT           https://<account>.r2.cloudflarestorage.com
+#   R2_ACCESS_KEY         R2 access key
+#   R2_SECRET_KEY         R2 secret key
+#   R2_BUCKET             bucket name
+#   R2_PUBLIC_URL         CDN or public bucket URL
+#   PAYSTACK_SECRET_KEY   sk_live_...
+#   PAYSTACK_WEBHOOK_SECRET  webhook secret from Paystack dashboard
+#   MAIL_HOST             SMTP host (e.g. smtp.sendgrid.net)
+#   MAIL_PORT             587
+#   MAIL_USERNAME         SMTP username
+#   MAIL_PASSWORD         SMTP password / API key
+#   MAIL_FROM             sender address
+#   FRONTEND_URL          https://yourdomain.com
+#   CORS_ORIGINS          https://yourdomain.com
+#   GOTENBERG_URL         http://gotenberg:3000 (internal Docker network)
+# ============================================================
+
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USER}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      pool-name: DocuFlowProd
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          min-idle: 2
+
+  cache:
+    type: redis
+    redis:
+      time-to-live: 300000
+
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+
+  flyway:
+    baseline-on-migrate: false
+
+logging:
+  level:
+    root: WARN
+    com.docuflow: INFO
+
+server:
+  port: ${PORT:8080}
+  # Production: run behind a reverse proxy (nginx / Render / Railway)
+  forward-headers-strategy: native

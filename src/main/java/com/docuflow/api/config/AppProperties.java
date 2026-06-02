@@ -1,11 +1,14 @@
 package com.docuflow.api.config;
 
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
-import lombok.Getter;
-import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Strongly-typed representation of all custom app.* properties.
@@ -27,7 +30,10 @@ public class AppProperties {
     @Valid private Paystack paystack = new Paystack();
     @Valid private Cors cors = new Cors();
     @Valid private Mail mail = new Mail();
-    @Valid private Plans plans = new Plans();
+    @Valid
+    private Plans plans = new Plans();
+
+
 
     @NotBlank
     private String frontendUrl;

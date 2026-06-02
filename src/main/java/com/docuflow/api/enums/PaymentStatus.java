@@ -1,7 +1,7 @@
 package com.docuflow.api.enums;
 
 public enum PaymentStatus {
-     PENDING,
+    PENDING,
     COMPLETED,
     FAILED,
     REFUNDED

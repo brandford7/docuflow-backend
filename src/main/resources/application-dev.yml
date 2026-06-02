@@ -1,0 +1,53 @@
+# ============================================================
+# application-dev.yml — development environment
+#
+# Activated by: -Dspring.profiles.active=dev
+# Or in launch.json: "vmArgs": "-Dspring.profiles.active=dev"
+#
+# Assumes:
+#   PostgreSQL on localhost:5432 (Docker: docuflow-pg)
+#   Redis on localhost:6379      (Docker: docuflow-redis)
+#   Gotenberg on localhost:3001  (Docker: gotenberg/gotenberg:8)
+# ============================================================
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/docuflow
+    username: docuflow
+    password: docuflow
+    hikari:
+      pool-name: DocuFlowDev
+      maximum-pool-size: 5
+      minimum-idle: 1
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+
+  cache:
+    type: redis
+
+  mail:
+    host: localhost
+    port: 1025
+    username:
+    password:
+
+  flyway:
+    # baseline-on-migrate allows Flyway to run on a non-empty schema.
+    # Safe to enable in dev — do not enable in prod.
+    baseline-on-migrate: true
+
+logging:
+  level:
+    root: INFO
+    com.docuflow: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+
+server:
+  port: 8080

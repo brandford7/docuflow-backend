@@ -1,6 +1,6 @@
 package com.docuflow.api.enums;
 
-public enum ProcessingStatus {
+public enum OperationStatus {
     QUEUED,
     PROCESSING,
     COMPLETED,
